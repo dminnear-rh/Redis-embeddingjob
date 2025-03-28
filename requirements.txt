@@ -12,8 +12,9 @@ pypdf==3.16.2; python_version >= '3.6'
 bs4
 pgvector==0.2.5; python_version >= '3.8'
 psycopg[binary,pool]==3.1.18; python_version >= '3.8'
-langchain==0.2.16; python_version < '4.0' and python_full_version >= '3.8.1'
-langchain-community==0.2.16; python_version < '4.0' and python_full_version >= '3.8.1'
-langchain-core==0.2.38; python_version < '4.0' and python_full_version >= '3.8.1'
-langchain-elasticsearch==0.2.2; python_version < '4.0' and python_full_version >= '3.8.1'
-langchain-text-splitters==0.2.4; python_version < '4.0' and python_full_version >= '3.8.1'
+langchain
+langchain-community
+langchain-core
+langchain-elasticsearch
+langchain-text-splitters
+langchain-sqlserver
