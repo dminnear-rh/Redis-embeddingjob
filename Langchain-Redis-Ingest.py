@@ -2,9 +2,9 @@
 # coding: utf-8
 
 # ## Creating an index and populating it with documents using Redis
-# 
+#
 # Simple example on how to ingest PDF documents, then web pages content into a Redis VectorStore.
-# 
+#
 # Requirements:
 # - A Redis cluster
 # - A Redis database with at least 2GB of memory (to match with the initial index cap)
@@ -48,8 +48,15 @@ all_splits = text_splitter.split_documents(docs)
 print(">>>>Creating index .....")
 # #### Create the index and ingest the documents
 
+def chunk_list(lst, size):
+    for i in range(0, len(lst), size):
+        yield lst[i:i + size]
 
-db_provider.add_documents(all_splits)
+BATCH_SIZE = 50  # adjust based on what SQL Server can handle
+for chunk in chunk_list(all_splits, BATCH_SIZE):
+    db_provider.add_documents(chunk)
+
+# db_provider.add_documents(all_splits)
 
 # ## Ingesting new documents
 # #### Example with Web pages

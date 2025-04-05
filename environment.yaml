@@ -1,0 +1,30 @@
+name: dev
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - numpy
+  - pandas
+  - pytorch
+  - torchvision
+  - pytorch-lightning
+  - torchmetrics
+  - redis-py
+  - pypdf
+  - beautifulsoup4
+  - psycopg2
+  - pgvector
+  - pyodbc
+  - unixodbc
+  - pip
+  - pip:
+      - sentence-transformers
+      - langchain
+      - langchain-community
+      - langchain-core
+      - langchain-elasticsearch
+      - langchain-text-splitters
+      - langchain-sqlserver
+      - langchain-huggingface

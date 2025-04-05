@@ -1,19 +1,39 @@
+FROM registry.access.redhat.com/ubi9/ubi:9.5
 
-FROM registry.access.redhat.com/ubi8/ubi
-
+# Set working directory
 WORKDIR /app/
+
+# Install system dependencies and Microsoft ODBC Driver 18 for SQL Server
+RUN dnf install -y \
+        wget \
+        git \
+        unixODBC \
+        unixODBC-devel && \
+    curl -sSL https://packages.microsoft.com/config/rhel/9/prod.repo -o /etc/yum.repos.d/mssql-release.repo && \
+    ACCEPT_EULA=Y dnf install -y msodbcsql18 && \
+    dnf clean all
+
+# Install Miniconda
+RUN mkdir -p ~/miniconda3 && \
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh && \
+    bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 && \
+    rm ~/miniconda3/miniconda.sh && \
+    ~/miniconda3/bin/conda update -n base -c defaults conda -y
+
+# Copy environment file and create Conda environment
+COPY environment.yaml /app/
+RUN ~/miniconda3/bin/conda env create -f /app/environment.yaml
+
+# Copy application files (after environment setup for faster rebuilds)
 COPY vector_db /app/vector_db
 COPY Langchain-Redis-Ingest.py /app/
 COPY redis_schema.yaml /app/
 COPY entrypoint.sh /app/
-COPY requirements.txt /app/
 
-RUN chmod -R 777 /app/ && ls -la /app/
-RUN dnf install git -y && dnf install python3.11 -y && dnf install python3.11-pip -y && pip3.11 install -r requirements.txt
-RUN chown 1001:0 /app/*
+# Set permissions and switch to non-root user
+RUN chmod -R 777 /app/ && \
+    chown 1001:0 /app/*
+
 USER 1001
-
-# RUN pip3.11 install -r requirements.txt
-
 
 ENTRYPOINT [ "/usr/bin/bash", "/app/entrypoint.sh" ]

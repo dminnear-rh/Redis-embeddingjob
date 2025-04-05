@@ -5,3 +5,6 @@ lib64
 include
 share
 tmp
+.python-version
+.venv
+.gitignore
