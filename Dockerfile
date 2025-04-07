@@ -1,14 +1,11 @@
 FROM registry.access.redhat.com/ubi9/ubi:9.5
 
-# Set working directory
-WORKDIR /app/
-
 # Install system dependencies and Microsoft ODBC Driver 18 for SQL Server
 RUN dnf install -y \
-        wget \
-        git \
-        unixODBC \
-        unixODBC-devel && \
+    wget \
+    git \
+    unixODBC \
+    unixODBC-devel && \
     curl -sSL https://packages.microsoft.com/config/rhel/9/prod.repo -o /etc/yum.repos.d/mssql-release.repo && \
     ACCEPT_EULA=Y dnf install -y msodbcsql18 && \
     dnf clean all
@@ -20,19 +17,22 @@ RUN mkdir -p ~/miniconda3 && \
     rm ~/miniconda3/miniconda.sh && \
     ~/miniconda3/bin/conda update -n base -c defaults conda -y
 
+# Set working directory
+WORKDIR /app
+
 # Copy environment file and create Conda environment
-COPY environment.yaml /app/
+COPY environment.yaml .
 RUN ~/miniconda3/bin/conda env create -f /app/environment.yaml
 
-# Copy application files (after environment setup for faster rebuilds)
-COPY vector_db /app/vector_db
-COPY Langchain-Redis-Ingest.py /app/
-COPY redis_schema.yaml /app/
-COPY entrypoint.sh /app/
+# Copy application files
+COPY vector_db .
+COPY Langchain-Redis-Ingest.py .
+COPY redis_schema.yaml .
+COPY entrypoint.sh .
 
 # Set permissions and switch to non-root user
-RUN chmod -R 777 /app/ && \
-    chown 1001:0 /app/*
+RUN chmod -R 777 . && \
+    chown 1001:0 ./*
 
 USER 1001
 

@@ -1,10 +1,8 @@
-import json
 from typing import Optional, List
 import uuid
 from langchain_sqlserver import SQLServer_VectorStore
 from vector_db.db_provider import DBProvider
 from langchain_core.documents import Document
-import langchain_huggingface as hf
 import os
 import pyodbc
 
