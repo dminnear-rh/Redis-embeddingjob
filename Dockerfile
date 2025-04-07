@@ -25,7 +25,7 @@ COPY environment.yaml .
 RUN ~/miniconda3/bin/conda env create -f /app/environment.yaml
 
 # Copy application files
-COPY vector_db .
+COPY vector_db ./vector_db
 COPY Langchain-Redis-Ingest.py .
 COPY redis_schema.yaml .
 COPY entrypoint.sh .
@@ -36,4 +36,4 @@ RUN chmod -R 777 . && \
 
 USER 1001
 
-ENTRYPOINT [ "/usr/bin/bash", "/app/entrypoint.sh" ]
+CMD ./entrypoint.sh
