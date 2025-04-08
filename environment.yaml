@@ -1,10 +1,10 @@
 name: dev
 channels:
-  - pytorch
   - conda-forge
   - defaults
 dependencies:
   - python=3.12
+  - accelerate
   - beautifulsoup4
   - numpy
   - pandas
@@ -19,6 +19,7 @@ dependencies:
   - sentence-transformers
   - torchmetrics
   - torchvision
+  - transformers
   - unixodbc
   - pip:
       - langchain
