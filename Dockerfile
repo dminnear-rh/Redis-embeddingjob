@@ -24,7 +24,7 @@ WORKDIR /app
 COPY environment.yaml .
 RUN ~/miniconda3/bin/conda env create -f /app/environment.yaml
 
-# Copy application files
+# Copy application files and folders
 COPY vector_db ./vector_db
 COPY Langchain-Redis-Ingest.py .
 COPY redis_schema.yaml .

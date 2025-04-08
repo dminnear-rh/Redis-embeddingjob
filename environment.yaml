@@ -1,30 +1,29 @@
 name: dev
 channels:
-  - pytorch
   - conda-forge
   - defaults
 dependencies:
   - python=3.12
+  - beautifulsoup4
   - numpy
   - pandas
-  - pytorch
-  - torchvision
-  - pytorch-lightning
-  - torchmetrics
-  - redis-py
-  - pypdf
-  - beautifulsoup4
-  - psycopg2
   - pgvector
-  - pyodbc
-  - unixodbc
   - pip
+  - psycopg2
+  - pyodbc
+  - pypdf
+  - pytorch
+  - pytorch-lightning
+  - redis-py
+  - sentence-transformers
+  - torchmetrics
+  - torchvision
+  - unixodbc
   - pip:
-      - sentence-transformers
       - langchain
       - langchain-community
       - langchain-core
       - langchain-elasticsearch
-      - langchain-text-splitters
-      - langchain-sqlserver
       - langchain-huggingface
+      - langchain-sqlserver
+      - langchain-text-splitters
