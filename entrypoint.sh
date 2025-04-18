@@ -1,20 +1,25 @@
+#!/usr/bin/env bash
 
-#!/bin/bash
+set -e
 
-echo "DOC_GIT_REPO  : $DOC_GIT_REPO"
-echo "DOC_LOCATION  : $DOC_LOCATION"
-echo "TEMP_DIR      : $TEMP_DIR"
+# Required
+: "${DOC_GIT_REPO:?DOC_GIT_REPO is required}"
 
-if [ -z ${DOC_GIT_REPO+x} ]; then
-    echo "Provide GIT repository location"
-    exit 1
-fi
-if [ -z ${DOC_GIT_REPO+x} ]; then
-    echo "Document location is not set. Provide location inside directory"
-    exit 1
-fi
+# Optional with defaults
+: "${TEMP_DIR:=/tmp}"
+: "${DOC_LOCATION:=}"
 
-mkdir ${TEMP_DIR}/source_repo
-git clone ${DOC_GIT_REPO} ${TEMP_DIR}/source_repo
+# Prepare destination path
+REPO_PATH="${TEMP_DIR}/source_repo"
+mkdir -p "$REPO_PATH"
 
-python3 -u  ./Langchain-Redis-Ingest.py
+# Clone PDF docs source
+echo "Cloning repository $DOC_GIT_REPO to $REPO_PATH"
+git clone --depth 1 "$DOC_GIT_REPO" "$REPO_PATH"
+
+# Build and export full document path for the embedding job
+export PDF_FOLDER="${REPO_PATH}/${DOC_LOCATION}"
+echo "Resolved PDF_FOLDER: $PDF_FOLDER"
+
+# Run the embedding script
+python -u ./embed_documents.py

@@ -1,47 +1,41 @@
-from typing import Optional
-from langchain_elasticsearch.vectorstores import ElasticsearchStore
-from langchain_core.vectorstores import VectorStoreRetriever
-from vector_db.db_provider import DBProvider
 import os
+from typing import List
+
+from langchain_core.documents import Document
+from langchain_elasticsearch.vectorstores import ElasticsearchStore
+
+from utils import get_required_env_var
+from vector_db.db_provider import DBProvider
+
 
 class ElasticProvider(DBProvider):
-    type = "ELASTIC"
-    url: Optional[str] = None
-    index: Optional[str] = None
-    user: Optional[str] = None
-    password: Optional[str] = None
-    retriever: Optional[any] = None
-    db: Optional[any] = None
-    retriever: Optional[VectorStoreRetriever] = None
+    """
+    Elasticsearch-based vector DB provider.
+
+    Required Environment Variables:
+        - ELASTIC_URL: Full URL to the Elasticsearch cluster
+        - ELASTIC_PASSWORD: Auth password
+
+    Optional Environment Variables:
+        - ELASTIC_INDEX: Index name (default: 'docs')
+        - ELASTIC_USER: Auth username (default: 'elastic')
+    """
 
     def __init__(self):
         super().__init__()
-        self.url = os.getenv('ELASTIC_URL')
-        self.index =  os.getenv('ELASTIC_INDEX') if os.getenv('ELASTIC_INDEX') else "docs"
-        self.user =  os.getenv('ELASTIC_USER') if os.getenv('ELASTIC_USER') else "elastic"
-        self.password =  os.getenv('ELASTIC_PASSWORD')
-        if self.url is None:
-            raise ValueError("ELASTIC_URL is not specified")
-        if self.password is None:
-            raise ValueError("ELASTIC_PASSWORD is not specified")
-        
-        pass
-  
-    @classmethod
-    def _get_type(cls) -> str:
-        """Returns type of the db provider"""
-        return cls.type
-    
-    def get_client(self) -> ElasticsearchStore:
-        if self.db is None:
-            self.db = ElasticsearchStore(
-                embedding=self.get_embeddings(),
-                es_url=self.url,
-                es_user=self.user,
-                es_password=self.password,
-                index_name=self.index)
 
-        return self.db
-    
-    def add_documents(self, docs):
-        self.get_client().add_documents(docs)
+        url = get_required_env_var("ELASTIC_URL")
+        password = get_required_env_var("ELASTIC_PASSWORD")
+        index = os.getenv("ELASTIC_INDEX", "docs")
+        user = os.getenv("ELASTIC_USER", "elastic")
+
+        self.db = ElasticsearchStore(
+            embedding=self.embeddings,
+            es_url=url,
+            es_user=user,
+            es_password=password,
+            index_name=index,
+        )
+
+    def add_documents(self, docs: List[Document]) -> None:
+        self.db.add_documents(docs)

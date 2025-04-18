@@ -1,21 +1,24 @@
-from typing import Optional
-from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
+from abc import ABC, abstractmethod
+from typing import List
+
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from langchain_core.vectorstores import VectorStoreRetriever
 
-class DBProvider:
-    """Base class for DB Provider.
+
+class DBProvider(ABC):
     """
-    embeddings: Optional[Embeddings] = None
+    Abstract base class for vector DB providers.
+    Subclasses must implement `add_documents`.
+    """
+
     def __init__(self) -> None:
-        self.embeddings = HuggingFaceEmbeddings()
-        pass
+        self.embeddings: Embeddings = HuggingFaceEmbeddings()
 
-    def _get_type(self) -> str:
+    @abstractmethod
+    def add_documents(self, docs: List[Document]) -> None:
+        """
+        Add a list of documents (already embedded or to be embedded) to the vector store.
+        Must be implemented by subclasses.
+        """
         pass
-
-    def add_documents(self, docs):
-        pass
-
-    def get_embeddings(self) -> Embeddings:
-        return self.embeddings

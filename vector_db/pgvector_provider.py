@@ -1,44 +1,35 @@
-from typing import Optional
-from vector_db.db_provider import DBProvider
+from typing import List
+
 from langchain_community.vectorstores.pgvector import PGVector
-from langchain_core.vectorstores import VectorStoreRetriever
-import os
+from langchain_core.documents import Document
+
+from utils import get_required_env_var
+from vector_db.db_provider import DBProvider
+
 
 class PGVectorProvider(DBProvider):
-    type = "PGVECTOR"
-    url: Optional[str] = None
-    collection_name: Optional[str] = None
-    retriever: Optional[VectorStoreRetriever] = None
-    db: Optional[PGVector] = None
+    """
+    PostgreSQL PGVector-based vector DB provider.
+
+    Required Environment Variables:
+        - PGVECTOR_URL: PostgreSQL connection string
+        - PGVECTOR_COLLECTION_NAME: Table or collection name in the database
+    """
+
     def __init__(self):
         super().__init__()
-        self.url = os.getenv('PGVECTOR_URL')
-        self.collection_name = os.getenv('PGVECTOR_COLLECTION_NAME')
-        if self.url is None:
-            raise ValueError("PGVECTOR_URL is not specified")
-        if self.collection_name is None:
-            raise ValueError("PGVECTOR_COLLECTION_NAME is not specified")
 
-        pass
-  
-    @classmethod
-    def _get_type(cls) -> str:
-        """Returns type of the db provider"""
-        return cls.type
+        url = get_required_env_var("PGVECTOR_URL")
+        collection_name = get_required_env_var("PGVECTOR_COLLECTION_NAME")
 
-    def get_client(self) -> PGVector:
-        if self.db is None:
-            self.db = PGVector(
-                connection_string=self.url,
-                collection_name=self.collection_name,
-                embedding_function=self.get_embeddings())
+        self.db = PGVector(
+            connection_string=url,
+            collection_name=collection_name,
+            embedding_function=self.embeddings,
+        )
 
-        return self.db
-
-    
-    def add_documents(self, docs):
+    def add_documents(self, docs: List[Document]) -> None:
+        # Sanitize null characters (PG doesn't accept them)
         for doc in docs:
-            doc.page_content = doc.page_content.replace('\x00', '')
-        
-        self.get_client().add_documents(docs)
-
+            doc.page_content = doc.page_content.replace("\x00", "")
+        self.db.add_documents(docs)

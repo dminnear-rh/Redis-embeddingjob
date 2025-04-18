@@ -1,72 +1,70 @@
-from typing import Optional
-from langchain_community.vectorstores.redis import Redis, RedisVectorStoreRetriever
-from langchain_core.vectorstores import VectorStoreRetriever
-from vector_db.db_provider import DBProvider
+import logging
 import os
+from typing import List
+
 import redis
+from langchain_community.vectorstores.redis import Redis as RedisVectorStore
+from langchain_core.documents import Document
+
+from utils import get_required_env_var
+from vector_db.db_provider import DBProvider
+
+logger = logging.getLogger(__name__)
+
 
 class RedisProvider(DBProvider):
-    type = "Redis"
-    url: Optional[str] = None
-    index: Optional[str] = None
-    schema: Optional[str] = None
-    retriever: Optional[any] = None
-    db: Optional[any] = None
-    retriever: Optional[VectorStoreRetriever] = None
-    redis_client: Optional[any] = None
+    """
+    Redis-based vector DB provider using RediSearch.
+
+    Required Environment Variables:
+        - REDIS_URL: Redis connection string (e.g. redis://localhost:6379)
+
+    Optional Environment Variables:
+        - REDIS_INDEX: RediSearch index name (default: 'docs')
+        - REDIS_SCHEMA: Path to schema file for RediSearch index (default: 'redis_schema.yaml')
+    """
 
     def __init__(self):
         super().__init__()
-        self.url = os.getenv('REDIS_URL')
-        self.index =  os.getenv('REDIS_INDEX') if os.getenv('REDIS_INDEX') else "docs"
-        self.schema =  os.getenv('REDIS_SCHEMA') if os.getenv('REDIS_SCHEMA') else "redis_schema.yaml"
-        if self.url is None:
-            raise ValueError("REDIS_URL is not specified")
 
-        pass
-  
-    @classmethod
-    def _get_type(cls) -> str:
-        """Returns type of the db provider"""
-        return cls.type
-    
-    def get_redis_client(self):
-        # Connect to Redis
-        if self.redis_client is None:
-            self.redis_client = redis.from_url(self.url)
-        return self.redis_client
+        self.url = get_required_env_var("REDIS_URL")
+        self.index = os.getenv("REDIS_INDEX", "docs")
+        self.schema = os.getenv("REDIS_SCHEMA", "redis_schema.yaml")
 
-    
-    def index_exists(self) -> bool:
-        # Check if index exists
-        exists = False
         try:
-            self.get_redis_client().ft(self.index).info()
-            print("Index already exists")
-            exists = True
+            self.redis_client = redis.from_url(self.url)
+            # Proactively test the connection
+            self.redis_client.ping()
         except Exception as e:
-            print(e)
-            # Create RediSearch Index
-            exists = False
-        return exists
-    
-    def add_documents(self, docs):
-        if self.index_exists():
-            self.db = Redis.from_existing_index(self.get_embeddings(),
-                                            redis_url=self.url,
-                                            index_name=self.index,
-                                            schema=self.schema)
+            logger.exception("Failed to connect to Redis at %s", self.url)
+            raise
 
-            self.db.add_documents(docs)
-
+        # Determine whether to load from existing index or create a new one
+        if self._index_exists():
+            logger.info("Loading existing Redis index: %s", self.index)
+            self.db = RedisVectorStore.from_existing_index(
+                embedding=self.embeddings,
+                redis_url=self.url,
+                index_name=self.index,
+                schema=self.schema,
+            )
         else:
-            self.db = Redis.from_documents(docs,
-                                    self.get_embeddings(),
-                                    redis_url=self.url,
-                                    index_name=self.index)
-            # Write the schema to a yaml file to be able to open the index later on
-            print("Creating schema...")
+            logger.info("Creating new Redis index: %s", self.index)
+            self.db = RedisVectorStore.from_documents(
+                documents=[],  # Will be added later
+                embedding=self.embeddings,
+                redis_url=self.url,
+                index_name=self.index,
+            )
+            logger.info("Writing Redis schema to: %s", self.schema)
             self.db.write_schema(self.schema)
 
+    def _index_exists(self) -> bool:
+        try:
+            self.redis_client.ft(self.index).info()
+            return True
+        except Exception:
+            return False
 
-
+    def add_documents(self, docs: List[Document]) -> None:
+        self.db.add_documents(docs)
