@@ -1,12 +1,10 @@
 import logging
-import os
 from typing import List
 
 import pyodbc
 from langchain_core.documents import Document
 from langchain_sqlserver import SQLServer_VectorStore
 
-from utils import get_required_env_var
 from vector_db.db_provider import DBProvider
 
 logger = logging.getLogger(__name__)
@@ -16,23 +14,48 @@ class SQLServerProvider(DBProvider):
     """
     SQL Server-based vector DB provider using LangChain's SQLServer_VectorStore.
 
-    Required Environment Variables:
-        - SQLSERVER_HOST: Host of the SQL Server instance
-        - SQLSERVER_PORT: Port number
-        - SQLSERVER_USER: Database username
-        - SQLSERVER_PASSWORD: Password
-        - SQLSERVER_TABLE: Name of the table to store vectors
+    Args:
+        host (str): Hostname of the SQL Server
+        port (str): Port number
+        user (str): SQL login username
+        password (str): SQL login password
+        database (str): Database name to connect to or create
+        table (str): Name of the table used to store vector embeddings
+        driver (str): ODBC driver name (e.g., 'ODBC Driver 18 for SQL Server')
 
-    Optional Environment Variables:
-        - SQLSERVER_DB: Name of the database (default: 'docs')
-        - SQLSERVER_DRIVER: ODBC driver name (default: 'ODBC Driver 18 for SQL Server')
+    Example:
+        >>> provider = SQLServerProvider(
+        ...     host="localhost",
+        ...     port="1433",
+        ...     user="sa",
+        ...     password="StrongPassword!",
+        ...     database="docs",
+        ...     table="vector_table",
+        ...     driver="ODBC Driver 18 for SQL Server"
+        ... )
+        >>> provider.add_documents(chunks)
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        host: str,
+        port: str,
+        user: str,
+        password: str,
+        database: str,
+        table: str,
+        driver: str,
+    ) -> None:
         super().__init__()
 
-        self.database = os.getenv("SQLSERVER_DB", "docs")
-        self.table = get_required_env_var("SQLSERVER_TABLE")
+        self.host = host
+        self.port = port
+        self.user = user
+        self.password = password
+        self.database = database
+        self.table = table
+        self.driver = driver
+
         self.connection_string = self._build_connection_string(self.database)
 
         self._ensure_database_exists()
@@ -40,22 +63,16 @@ class SQLServerProvider(DBProvider):
             connection_string=self.connection_string,
             embedding_function=self.embeddings,
             table_name=self.table,
-            embedding_length=768,  # This should match the model used
+            embedding_length=768,  # Should match the sentence-transformer model
         )
 
     def _build_connection_string(self, db_name: str) -> str:
-        host = get_required_env_var("SQLSERVER_HOST")
-        port = get_required_env_var("SQLSERVER_PORT")
-        user = get_required_env_var("SQLSERVER_USER")
-        password = get_required_env_var("SQLSERVER_PASSWORD")
-        driver = os.getenv("SQLSERVER_DRIVER", "ODBC Driver 18 for SQL Server")
-
         return (
-            f"Driver={{{driver}}};"
-            f"Server={host},{port};"
+            f"Driver={{{self.driver}}};"
+            f"Server={self.host},{self.port};"
             f"Database={db_name};"
-            f"UID={user};"
-            f"PWD={password};"
+            f"UID={self.user};"
+            f"PWD={self.password};"
             "TrustServerCertificate=yes;"
             "Encrypt=no;"
         )
@@ -76,6 +93,15 @@ class SQLServerProvider(DBProvider):
             )
 
     def add_documents(self, docs: List[Document]) -> None:
+        """
+        Add documents to the SQL Server table in batches.
+
+        Args:
+            docs (List[Document]): List of LangChain documents to embed and insert.
+
+        Raises:
+            Exception: If any batch insert fails.
+        """
         batch_size = 50
         for i in range(0, len(docs), batch_size):
             batch = docs[i : i + batch_size]

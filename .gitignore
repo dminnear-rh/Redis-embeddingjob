@@ -6,3 +6,4 @@ include
 share
 tmp
 environment.yaml
+__pycache__

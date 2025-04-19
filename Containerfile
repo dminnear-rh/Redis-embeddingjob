@@ -18,12 +18,11 @@ COPY vector_db ./vector_db
 COPY loaders ./loaders
 COPY embed_documents.py .
 COPY config.py .
-COPY utils.py .
 COPY redis_schema.yaml .
-COPY entrypoint.sh .
+COPY .env .
 
 RUN chown -R 1001:0 .
 
 USER 1001
 
-CMD ./entrypoint.sh
+CMD ./embed_documents.py

@@ -1,44 +1,48 @@
 #!/usr/bin/env python
 
 import logging
-import os
 
-import config
-from loaders.pdf_loader import PDFLoader
-from loaders.web_loader import WebLoader
-from utils import get_required_env_var
-from vector_db.db_type import DBType
+from config import Config
+from loaders.git import GitLoader
+from loaders.web import WebLoader
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Initialize logging
+config = Config.load()
+logging.basicConfig(level=config.log_level)
 logger = logging.getLogger(__name__)
 
-# Create db_provider based on user-provided DB_TYPE env var
-try:
-    db_type = DBType.from_string(config.DB_TYPE)
-    db_provider = db_type.get_provider_class()()
-    logger.info(f"Using vector DB provider: %s", db_type.value)
-except Exception as e:
-    logger.exception("Failed to initialize DB provider.")
-    raise
+# Run Git document embedding if sources provided
+if config.repo_sources:
+    logger.info("Starting Git-based document embedding...")
+    try:
+        git_loader = GitLoader(config)
+        git_chunks = git_loader.load()
 
-# Load documents from folder of PDF files
-try:
-    pdf_loader = PDFLoader(db_provider)
-    pdf_folder = get_required_env_var("PDF_FOLDER")
-    logger.info("Loading and embedding PDF documents from: %s", pdf_folder)
-    pdf_loader.load(pdf_folder)
-    logger.info("Finished processing PDF documents.")
-except Exception as e:
-    logger.exception("Error while processing PDF documents.")
-    raise
+        if git_chunks:
+            logger.info(
+                "Adding %d document chunks from Git to vector DB", len(git_chunks)
+            )
+            config.db_provider.add_documents(git_chunks)
+        else:
+            logger.info("No documents found in Git sources.")
+    except Exception:
+        logger.exception("Failed during Git document processing")
 
-# Load documents from web pages
-try:
-    web_loader = WebLoader(db_provider)
-    logger.info("Loading and embedding web documents from configured URLs.")
-    web_loader.load(config.WEB_URLS)
-    logger.info("Finished processing web documents.")
-except Exception as e:
-    logger.exception("Error while processing web documents.")
-    raise
+# Run Web document embedding if URLs provided
+if config.web_sources:
+    logger.info("Starting Web-based document embedding...")
+    try:
+        web_loader = WebLoader(config)
+        web_chunks = web_loader.load(config.web_sources)
+
+        if web_chunks:
+            logger.info(
+                "Adding %d document chunks from Web to vector DB", len(web_chunks)
+            )
+            config.db_provider.add_documents(web_chunks)
+        else:
+            logger.info("No documents returned from provided URLs.")
+    except Exception:
+        logger.exception("Failed during Web document processing")
+
+logger.info("Embedding job complete.")
